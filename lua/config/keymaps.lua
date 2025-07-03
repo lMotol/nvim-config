@@ -12,3 +12,6 @@ map("n", "<A-Up>", "<cmd>resize +2<cr>", { desc = "Increase Window Height" })
 map("n", "<A-Down>", "<cmd>resize -2<cr>", { desc = "Decrease Window Height" })
 map("n", "<A-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease Window Width" })
 map("n", "<A-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase Window Width" })
+
+-- Esc remap
+map("i", "jj", "<Esc>", { desc = "Esc" })
