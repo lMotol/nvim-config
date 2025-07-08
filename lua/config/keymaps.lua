@@ -15,3 +15,6 @@ map("n", "<A-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase Window W
 
 -- Esc remap
 map("i", "jj", "<Esc>", { desc = "Esc" })
+
+-- gutentags
+map("n", "<leader>t", "<cmd>GutentagsUpdate<CR>", { desc = "update tags (gutentags)" })
