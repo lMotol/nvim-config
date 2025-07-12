@@ -2,12 +2,20 @@ return {
     "obsidian-nvim/obsidian.nvim",
     branch = "main", -- 最新リリースを追従
     lazy = true, -- 明示しなくても true だが念のため
-    ft = "markdown", -- ⑴: どの MD でも読み込む
+    -- ft = "markdown", -- ⑴: どの MD でも読み込む
     -- ⑵: 特定 Vault 内だけで読み込みたい場合は ↓ を使う
     -- event = {
-    --   "BufReadPre " .. vim.fn.expand "~" .. "/Users/suzukimotomasa/Library/Mobile Documents/iCloud~md~obsidian/Documents/main/lab/research/lab_note/*.md",
-    --   "BufNewFile  "/Users/suzukimotomasa/Library/Mobile Documents/iCloud~md~obsidian/Documents/main/lab/research/lab_note/*.md",
+    --     "BufReadPre " .. "/Users/suzukimotomasa/Library/Mobile Documents/iCloud~md~obsidian/Documents/main/**",
+    --     "BufNewFile  " .. "/Users/suzukimotomasa/Library/Mobile Documents/iCloud~md~obsidian/Documents/main/**",
     -- },
+    event = "VimEnter",
+    cond = function()
+        -- Neovim 0.10+ なら vim.loop.cwd()、それ以前は vim.fn.getcwd()
+        local cwd = vim.loop.cwd()
+        local vault = vim.fn.expand("~/Library/Mobile Documents/iCloud~md~obsidian/Documents/main")
+        -- `string.find(..., 1, true)` で単純部分一致
+        return cwd:find(vault, 1, true) ~= nil
+    end,
     dependencies = {
         "nvim-lua/plenary.nvim",
         "ibhagwan/fzf-lua",
@@ -27,11 +35,21 @@ return {
                 min_chars = 2,
             },
         },
+        checkbox = {
+            order = { " ", "x" }, -- ← ここが肝
+        },
+        ui = {
+            checkboxes = {
+                [" "] = { char = "▢", hl_group = "obsidiantodo" },
+                ["x"] = { char = "󰱒", hl_group = "obsidiandone" },
+            },
+        },
         daily_notes = {
             -- 日次ノートを保存するフォルダ（Vault からの相対パス）
             folder = "daily memo",
             -- テンプレートファイルのパス（template subdir からの相対パス）
             template = "yyyy-mm-dd.md",
+            default_tags = {},
         },
         templates = {
             -- 一般的なテンプレートを置くフォルダ（Vault からの相対パス）
@@ -46,30 +64,24 @@ return {
                 ["lab_note"] = {
                     notes_subdir = "lab/lab_note",
                 },
+                ["tips"] = {
+                    notes_subdir = "lab/tips",
+                },
             },
         },
         note_frontmatter_func = function(note)
             -- note.date / note.time は daily_notes 設定から来る値です
-            local date = (type(note.date) == "string" and note.date ~= "") and note.date or os.date("%Y-%m-%d") -- フォールバック
-            local time = (type(note.time) == "string" and note.time ~= "") and note.time or os.date("%H:%M") -- フォールバック
-            local tags = {} -- デフォルト空
-            if note.template then
-                -- note.template は "template/meeting.md" のような相対パス文字列
-                if note.template:match("yyyy-mm-dd") then
-                    tags = { "daily" }
-                elseif note.template:match("lab_note") then
-                    tags = { "lab_note" }
-                else
-                    tags = { "misc" } -- その他テンプレ用
+            local out = { tags = note.tags }
+
+            -- `note.metadata` contains any manually added fields in the frontmatter.
+            -- So here we just make sure those fields are kept in the frontmatter.
+            if note.metadata ~= nil and not vim.tbl_isempty(note.metadata) then
+                for k, v in pairs(note.metadata) do
+                    out[k] = v
                 end
-            else
-                tags = { "misc" } -- テンプレート指定なし＝日次ノート系
             end
-            return {
-                created_at = date .. "_" .. time,
-                updated_at = date .. "_" .. time,
-                tags = tags,
-            }
+
+            return out
         end,
         callbacks = {
             pre_write_note = function(_, note)
@@ -84,6 +96,7 @@ return {
         { "<leader>oq", "<cmd>Obsidian quick_switch<cr>", desc = "ノート検索" },
         { "<leader>od", "<cmd>Obsidian today<cr>", desc = "daily note" },
         { "<leader>ot", "<cmd>Obsidian new_from_template<cr>", desc = "New daily note from template" },
+        { "<leader>oc", "<cmd>Obsidian toggle_checkbox<cr>", desc = "toggle checkboxes" },
         {
             "<leader>og",
             function()
@@ -92,10 +105,18 @@ return {
                 local client = require("obsidian").get_client()
                 local api = require("obsidian.api")
                 local Workspace = require("obsidian.workspace")
+                local util = require("obsidian.util")
                 -- 1) Obsidian リンク下ならフォロー
                 if api.cursor_on_markdown_link(nil, nil, true) then
                     -- args では ファイルの開き方を指定できる(画面分割して表示など)
-                    local file = vim.fn.expand("<cfile>") -- "FooBar.md" 等
+                    -- local file = vim.fn.expand("<cfile>") -- "FooBar.md" 等
+                    local s_col, e_col, link = api.cursor_on_markdown_link(nil, nil, true)
+                    local line = vim.api.nvim_get_current_line()
+                    local raw_link = line:sub(s_col, e_col)
+                    print(raw_link)
+                    local link_location, link_name, link_type = util.parse_link(raw_link)
+                    print(link_location, link_name, link_type)
+                    local file = link_name
                     if not file:match("%.md$") then
                         file = file .. ".md"
                     end
