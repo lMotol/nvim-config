@@ -2,7 +2,7 @@ return {
     "obsidian-nvim/obsidian.nvim",
     branch = "main", -- 最新リリースを追従
     lazy = true, -- 明示しなくても true だが念のため
-    -- ft = "markdown", -- ⑴: どの MD でも読み込む
+    ft = "markdown", -- ⑴: どの MD でも読み込む
     -- ⑵: 特定 Vault 内だけで読み込みたい場合は ↓ を使う
     -- event = {
     --     "BufReadPre " .. "/Users/suzukimotomasa/Library/Mobile Documents/iCloud~md~obsidian/Documents/main/**",
@@ -12,14 +12,15 @@ return {
     cond = function()
         -- Neovim 0.10+ なら vim.loop.cwd()、それ以前は vim.fn.getcwd()
         local cwd = vim.loop.cwd()
-        local vault = vim.fn.expand("~/Library/Mobile Documents/iCloud~md~obsidian/Documents/main")
+        local vault1 = vim.fn.expand("~/Library/Mobile Documents/iCloud~md~obsidian/Documents/main")
+        local vault2 = vim.fn.expand("~/Library/Mobile Documents/iCloud~md~obsidian/Documents/normal")
         -- `string.find(..., 1, true)` で単純部分一致
-        return cwd:find(vault, 1, true) ~= nil
+        return (cwd:find(vault1, 1, true) ~= nil) or (cwd:find(vault2, 1, true) ~= nil)
     end,
     dependencies = {
         "nvim-lua/plenary.nvim",
         "ibhagwan/fzf-lua",
-        "saghen/blink.cmp",
+        "hrsh7th/nvim-cmp",
     },
     opts = {
         workspaces = {
@@ -27,11 +28,39 @@ return {
                 name = "main",
                 path = vim.fn.expand("~/Library/Mobile Documents/iCloud~md~obsidian/Documents/main"),
             },
+            {
+                name = "normal",
+                path = vim.fn.expand("~/Library/Mobile Documents/iCloud~md~obsidian/Documents/normal"),
+                overrides = {
+                    daily_notes = {
+                        -- 日次ノートを保存するフォルダ（Vault からの相対パス）
+                        folder = "daily memo",
+                        -- テンプレートファイルのパス（template subdir からの相対パス）
+                        template = "yyyy-mm-dd.md",
+                        default_tags = {},
+                    },
+                    templates = {
+                        -- 一般的なテンプレートを置くフォルダ（Vault からの相対パス）
+                        folder = "template",
+                        -- テンプレート内で使う日付書式（Lua の os.date フォーマット）
+                        date_format = "%Y-%m-%d",
+                        time_format = "%H:%M",
+                        customizations = {
+                            ["yyyy-mm-dd"] = {
+                                notes_subdir = "daily memo",
+                            },
+                            ["music_detail"] = {
+                                notes_subdir = "Music_memo",
+                            },
+                        },
+                    },
+                },
+            },
         },
         completion = {
             completion = {
-                nvim_cmp = false, -- ← 無効化
-                blink = true, -- ← 有効化
+                nvim_cmp = true, -- ← 無効化
+                blink = false, -- ← 有効化
                 min_chars = 2,
             },
         },
@@ -67,6 +96,9 @@ return {
                 ["tips"] = {
                     notes_subdir = "lab/tips",
                 },
+                ["chatgpt"] = {
+                    notes_subdir = "lab/chatgpt",
+                },
             },
         },
         note_frontmatter_func = function(note)
@@ -86,15 +118,25 @@ return {
         callbacks = {
             pre_write_note = function(_, note)
                 -- frontmatter 内の updated_at を上書き
-                note.metadata.updated_at = os.date("%Y-%m-%d_%H:%M")
+                if note.metadata and note.metadata.updated_at ~= nil then
+                    note.metadata.updated_at = os.date("%Y-%m-%d_%H:%M")
+                end
             end,
         },
-        -- お好みで他の設定…
+        attachments = {
+            -- pngpaste が mac に install されている必要がある
+            img_folder = "picture",
+            img_name_func = function()
+                return ("img_%s.png"):format(os.date("%Y%m%d_%H%M%S"))
+            end,
+            confirm_img_paste = true,
+        },
     },
     keys = {
         { "<leader>on", "<cmd>Obsidian new<cr>", desc = "新規ノート" },
         { "<leader>oq", "<cmd>Obsidian quick_switch<cr>", desc = "ノート検索" },
         { "<leader>od", "<cmd>Obsidian today<cr>", desc = "daily note" },
+        { "<leader>op", "<cmd>Obsidian paste_img<cr>", desc = "画像の挿入" },
         { "<leader>ot", "<cmd>Obsidian new_from_template<cr>", desc = "New daily note from template" },
         { "<leader>oc", "<cmd>Obsidian toggle_checkbox<cr>", desc = "toggle checkboxes" },
         {
