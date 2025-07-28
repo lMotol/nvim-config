@@ -93,6 +93,12 @@ return {
                 ["lab_note"] = {
                     notes_subdir = "lab/lab_note",
                 },
+                ["other_note"] = {
+                    notes_subdir = "other_note",
+                },
+                ["paper_template"] = {
+                    notes_subdir = "lab/paper",
+                },
                 ["tips"] = {
                     notes_subdir = "lab/tips",
                 },
