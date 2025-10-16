@@ -46,3 +46,18 @@ lspconfig.clangd.setup({
     root_dir = lspconfig.util.root_pattern("compile_commands.json", "compile_flags.txt", ".git"),
     capabilities = require("cmp_nvim_lsp").default_capabilities(),
 })
+
+local venv = vim.fn.systemlist("poetry env info --path")[1]
+local venv_name = vim.fn.fnamemodify(venv, ":t") -- 例: llama-pdf-parse-xxxx-py3.12
+local venv_parent = vim.fn.fnamemodify(venv, ":h")
+
+lspconfig.pyright.setup({
+    root_dir = require("lspconfig.util").root_pattern("pyproject.toml", ".git"),
+    settings = {
+        python = {
+            venvPath = venv_parent,
+            venv = venv_name,
+            -- analysis = { autoImportCompletions = true, diagnosticMode = "workspace" },
+        },
+    },
+})
