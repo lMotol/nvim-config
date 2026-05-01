@@ -18,3 +18,7 @@ map("i", "jj", "<Esc>", { desc = "Esc" })
 
 -- gutentags
 map("n", "<leader>t", "<cmd>GutentagsUpdate<CR>", { desc = "update tags (gutentags)" })
+
+-- no format save
+vim.api.nvim_create_user_command("W", "noautocmd w", {})
+vim.api.nvim_create_user_command("Wq", "noautocmd wq", {})
